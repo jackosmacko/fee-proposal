@@ -263,6 +263,10 @@ function substituteMergeFields(doc, data) {
   data.stages.forEach(stage => {
     replaceDescriptionBlock(body, stage.stageKey, stage.description || '');
   });
+
+  // Fee schedule table — body only, must run after description blocks
+  const schedule = buildFeeSchedule(data);
+  if (schedule.length > 0) insertFeeScheduleTable(body, schedule);
 }
 
 // ============================================================
@@ -300,6 +304,108 @@ function replaceDescriptionBlock(body, stageKey, descriptionText) {
   for (let i = lines.length - 1; i >= 0; i--) {
     body.insertParagraph(startIdx, lines[i]);
   }
+}
+
+// ============================================================
+// BUILD FEE SCHEDULE
+// Returns array of { description, stageLabel, amount } rows.
+// ============================================================
+function buildFeeSchedule(data) {
+  const depositPercent = data.depositPercent || CONFIG.DEPOSIT_PERCENT;
+
+  const includedStages = (data.stages || []).filter(function(s) {
+    return s.status === 'Included' && Number(s.fee) > 0;
+  });
+
+  if (includedStages.length === 0) return [];
+
+  const totalFee = includedStages.reduce(function(sum, s) {
+    return sum + Number(s.fee);
+  }, 0);
+  const depositAmount = totalFee * depositPercent / 100;
+
+  const rows = [];
+
+  // Deposit row
+  const firstKey = includedStages[0].stageKey.replace(/_/g, '.');
+  const lastKey  = includedStages[includedStages.length - 1].stageKey.replace(/_/g, '.');
+  var stageRangeLabel;
+  if (includedStages.length === 1) {
+    stageRangeLabel = 'Stage ' + firstKey + ' ($' + Number(totalFee).toLocaleString() + ' + GST) \u2014 ' + depositPercent + '% Deposit';
+  } else {
+    stageRangeLabel = 'Stages ' + firstKey + '\u2013' + lastKey + ' (Total $' + Number(totalFee).toLocaleString() + ' + GST) \u2014 ' + depositPercent + '% Deposit';
+  }
+  rows.push({ description: 'Project Initiation', stageLabel: stageRangeLabel, amount: depositAmount });
+
+  // Per-stage rows
+  includedStages.forEach(function(stage) {
+    const stageFee = Number(stage.fee);
+    const stageRemaining = stageFee * (1 - depositPercent / 100);
+    const displayKey = stage.stageKey.replace(/_/g, '.');
+    const stageFeeLabel = 'Stage ' + displayKey + ' ($' + Number(stageFee).toLocaleString() + ' + GST)';
+
+    if (stageRemaining <= 5000) {
+      rows.push({
+        description: 'On 100% completion of Stage ' + displayKey + ': ' + stage.name,
+        stageLabel:  stageFeeLabel + ' \u2014 100% Complete',
+        amount:      stageRemaining,
+      });
+    } else {
+      const chunks = [];
+      let remaining = stageRemaining;
+      while (remaining > 5000) {
+        chunks.push(5000);
+        remaining -= 5000;
+      }
+      chunks.push(remaining);
+
+      let cumulative = 0;
+      const lastIdx = chunks.length - 1;
+      chunks.forEach(function(chunk, j) {
+        cumulative += chunk;
+        const pct = (j === lastIdx)
+          ? 100
+          : Math.min(90, Math.round(cumulative / stageRemaining * 10) * 10);
+        rows.push({
+          description: 'On ' + pct + '% completion of Stage ' + displayKey + ': ' + stage.name,
+          stageLabel:  stageFeeLabel + ' \u2014 ' + pct + '% Complete',
+          amount:      chunk,
+        });
+      });
+    }
+  });
+
+  return rows;
+}
+
+// ============================================================
+// INSERT FEE SCHEDULE TABLE
+// Replaces the {{fee_schedule}} placeholder paragraph with a
+// 3-column table. If placeholder not found, returns silently.
+// ============================================================
+function insertFeeScheduleTable(body, scheduleItems) {
+  const placeholder = '{{fee_schedule}}';
+  let placeholderIdx = -1;
+
+  for (let i = 0; i < body.getNumChildren(); i++) {
+    const child = body.getChild(i);
+    if (child.getType() !== DocumentApp.ElementType.PARAGRAPH) continue;
+    if (child.asParagraph().getText().trim() === placeholder) {
+      placeholderIdx = i;
+      break;
+    }
+  }
+
+  if (placeholderIdx === -1) return;
+
+  body.getChild(placeholderIdx).removeFromParent();
+
+  const cells = [['Progress', 'Stages as defined in Fee Proposal', 'Invoice Amount']];
+  scheduleItems.forEach(function(item) {
+    cells.push([item.description, item.stageLabel, formatCurrency(item.amount)]);
+  });
+
+  body.insertTable(placeholderIdx, cells);
 }
 
 // ============================================================
