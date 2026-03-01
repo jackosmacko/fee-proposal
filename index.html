@@ -1,0 +1,792 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Funkitecture Fee Proposal Generator</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,600;1,300;1,400&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --ink:       #1a1714;
+    --paper:     #f5f1eb;
+    --cream:     #ede8e0;
+    --rule:      #c8bfb0;
+    --accent:    #8b6c42;
+    --accent-lt: #c4a882;
+    --danger:    #a0432a;
+    --success:   #3a6b4a;
+    --mono:      'DM Mono', monospace;
+    --serif:     'Cormorant Garamond', Georgia, serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--serif);
+    background: var(--paper);
+    color: var(--ink);
+    min-height: 100vh;
+    font-size: 17px;
+    line-height: 1.6;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 28px 48px;
+    display: flex;
+    align-items: baseline;
+    gap: 24px;
+    border-bottom: 3px solid var(--accent);
+  }
+  header h1 {
+    font-size: 2rem;
+    font-weight: 300;
+    letter-spacing: 0.04em;
+    font-style: italic;
+  }
+  header span {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--accent-lt);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+
+  /* ── NAV TABS ── */
+  nav {
+    background: var(--cream);
+    border-bottom: 1px solid var(--rule);
+    display: flex;
+    padding: 0 48px;
+  }
+  nav button {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    background: none;
+    border: none;
+    padding: 16px 24px 14px;
+    cursor: pointer;
+    color: var(--accent);
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    transition: all 0.15s;
+  }
+  nav button.active {
+    color: var(--ink);
+    border-bottom-color: var(--accent);
+    background: var(--paper);
+  }
+  nav button:hover:not(.active) { color: var(--ink); }
+
+  /* ── MAIN CONTENT ── */
+  main { max-width: 900px; margin: 0 auto; padding: 48px 32px 80px; }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ── SECTION HEADINGS ── */
+  .section-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--rule);
+    margin-top: 40px;
+  }
+  .section-label:first-child { margin-top: 0; }
+
+  /* ── FORM ELEMENTS ── */
+  .field-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+  .field-row.full { grid-template-columns: 1fr; }
+  .field-row.three { grid-template-columns: 1fr 1fr 1fr; }
+
+  .field { display: flex; flex-direction: column; gap: 6px; }
+  label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+  }
+  input, select, textarea {
+    font-family: var(--serif);
+    font-size: 1rem;
+    background: white;
+    border: 1px solid var(--rule);
+    padding: 10px 14px;
+    color: var(--ink);
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+  }
+  textarea { resize: vertical; min-height: 100px; line-height: 1.5; }
+  select { cursor: pointer; }
+
+  /* ── STAGE CARDS ── */
+  .stage-card {
+    border: 1px solid var(--rule);
+    background: white;
+    margin-bottom: 12px;
+    overflow: hidden;
+  }
+  .stage-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 14px 18px;
+    background: var(--cream);
+    cursor: pointer;
+    user-select: none;
+  }
+  .stage-header:hover { background: #e8e2d8; }
+  .stage-number {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--accent);
+    min-width: 20px;
+  }
+  .stage-title {
+    flex: 1;
+    font-size: 0.95rem;
+    font-weight: 600;
+  }
+  .stage-toggle {
+    display: flex;
+    border: 1px solid var(--rule);
+    overflow: hidden;
+  }
+  .stage-toggle button {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border: none;
+    padding: 6px 10px;
+    cursor: pointer;
+    background: white;
+    color: var(--accent);
+    transition: all 0.1s;
+  }
+  .stage-toggle button.active-included { background: var(--success); color: white; }
+  .stage-toggle button.active-optional { background: var(--accent); color: white; }
+  .stage-toggle button.active-excluded { background: var(--danger); color: white; }
+
+  .stage-chevron {
+    font-size: 0.7rem;
+    color: var(--rule);
+    transition: transform 0.2s;
+  }
+  .stage-card.open .stage-chevron { transform: rotate(180deg); }
+
+  .stage-body {
+    display: none;
+    padding: 18px;
+    border-top: 1px solid var(--rule);
+  }
+  .stage-card.open .stage-body { display: block; }
+
+  /* ── CONSULTANT TABLE ── */
+  .consultant-row {
+    display: grid;
+    grid-template-columns: auto 1fr 160px;
+    align-items: center;
+    gap: 16px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--cream);
+  }
+  .consultant-row:last-child { border-bottom: none; }
+  .consultant-name { font-size: 0.95rem; }
+  .consultant-name.excluded { color: var(--rule); text-decoration: line-through; }
+
+  .toggle-check {
+    width: 18px; height: 18px;
+    accent-color: var(--accent);
+    cursor: pointer;
+  }
+
+  /* ── RATES TABLE ── */
+  .rates-grid {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    gap: 10px 24px;
+    align-items: center;
+  }
+  .rates-grid .rate-label { font-size: 0.95rem; }
+  .rates-grid .rate-year {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    color: var(--accent);
+  }
+  .rate-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .rate-input-wrap span {
+    font-family: var(--mono);
+    font-size: 0.85rem;
+    color: var(--accent);
+  }
+  .rate-input-wrap input { width: 80px; }
+
+  /* ── TOTAL BAR ── */
+  .total-bar {
+    background: var(--ink);
+    color: var(--paper);
+    padding: 20px 24px;
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-top: 32px;
+  }
+  .total-bar .label {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent-lt);
+  }
+  .total-bar .amount {
+    font-size: 2rem;
+    font-weight: 300;
+    font-style: italic;
+  }
+
+  /* ── BUTTONS ── */
+  .btn-primary {
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 16px 40px;
+    cursor: pointer;
+    transition: background 0.15s;
+    margin-top: 32px;
+  }
+  .btn-primary:hover { background: var(--ink); }
+  .btn-primary:disabled { background: var(--rule); cursor: not-allowed; }
+
+  /* ── EXISTING PROJECTS ── */
+  .project-list { display: flex; flex-direction: column; gap: 2px; margin-top: 8px; }
+  .project-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: white;
+    border: 1px solid var(--rule);
+    transition: border-color 0.15s;
+  }
+  .project-item:hover { border-color: var(--accent); }
+  .project-item .proj-name { font-size: 1rem; font-weight: 600; }
+  .project-item .proj-doc {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+  }
+  .project-item a {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--accent);
+    text-decoration: none;
+    border: 1px solid var(--accent);
+    padding: 6px 14px;
+    transition: all 0.15s;
+  }
+  .project-item a:hover { background: var(--accent); color: white; }
+  .no-doc { color: var(--rule); font-style: italic; font-size: 0.85rem; }
+
+  /* ── TOAST / STATUS ── */
+  #toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--ink);
+    color: var(--paper);
+    font-family: var(--mono);
+    font-size: 0.72rem;
+    letter-spacing: 0.08em;
+    padding: 14px 28px;
+    border-left: 3px solid var(--accent);
+    transition: transform 0.3s ease;
+    z-index: 999;
+    white-space: nowrap;
+  }
+  #toast.show { transform: translateX(-50%) translateY(0); }
+  #toast.error { border-left-color: var(--danger); }
+  #toast.success { border-left-color: var(--success); }
+
+  .spinner {
+    display: inline-block;
+    width: 12px; height: 12px;
+    border: 2px solid var(--accent-lt);
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    vertical-align: middle;
+    margin-right: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Funkitecture &amp; Co</h1>
+  <span>Fee Proposal Generator</span>
+</header>
+
+<nav>
+  <button class="active" onclick="showView('new')">New Proposal</button>
+  <button onclick="showView('existing'); loadExisting()">Open Existing</button>
+</nav>
+
+<main>
+
+  <!-- ════════════════════════════════════════════
+       NEW PROPOSAL VIEW
+  ════════════════════════════════════════════ -->
+  <div id="view-new" class="view active">
+
+    <div class="section-label">Client Details</div>
+    <div class="field-row">
+      <div class="field">
+        <label>Client Name</label>
+        <input type="text" id="clientName" placeholder="e.g. Johnson Ren">
+      </div>
+      <div class="field">
+        <label>Client Address</label>
+        <input type="text" id="clientAddress" placeholder="e.g. 701/1 Mooltan Avenue, Macquarie Park NSW 2113">
+      </div>
+    </div>
+
+    <div class="section-label">Project Details</div>
+    <div class="field-row three">
+      <div class="field">
+        <label>Project Address</label>
+        <input type="text" id="projectAddress" placeholder="e.g. 31 Irene Crescent, Eastwood">
+      </div>
+      <div class="field">
+        <label>Project Type</label>
+        <select id="projectType">
+          <option value="">Loading…</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Date</label>
+        <input type="date" id="proposalDate">
+      </div>
+    </div>
+    <div class="field-row full">
+      <div class="field">
+        <label>Project Description</label>
+        <input type="text" id="projectDescription" placeholder="e.g. Knockdown and rebuild of a Duplex">
+      </div>
+    </div>
+
+    <div class="section-label">Fee Stages</div>
+    <div id="stages-container"></div>
+
+    <div class="section-label">Consultant Cost Estimates</div>
+    <div id="consultants-container"></div>
+
+    <div class="section-label">Rates &amp; Terms</div>
+    <div class="rates-grid">
+      <div class="rate-label">Financial Year</div>
+      <div></div>
+      <div class="rate-input-wrap">
+        <input type="text" id="financialYear" style="width:120px" placeholder="2024-2025">
+      </div>
+
+      <div class="rate-label">Architect / Principal / Registered Architect</div>
+      <div class="rate-year">per hour</div>
+      <div class="rate-input-wrap">
+        <span>$</span>
+        <input type="number" id="rateArchitect" min="0">
+      </div>
+
+      <div class="rate-label">Graduate Architect / Interior Designer</div>
+      <div class="rate-year">per hour</div>
+      <div class="rate-input-wrap">
+        <span>$</span>
+        <input type="number" id="rateGraduate" min="0">
+      </div>
+
+      <div class="rate-label">Draftsperson</div>
+      <div class="rate-year">per hour</div>
+      <div class="rate-input-wrap">
+        <span>$</span>
+        <input type="number" id="rateDraftsperson" min="0">
+      </div>
+
+      <div class="rate-label">Deposit Required</div>
+      <div class="rate-year">% of total</div>
+      <div class="rate-input-wrap">
+        <input type="number" id="depositPercent" min="0" max="100" style="width:70px">
+        <span>%</span>
+      </div>
+    </div>
+
+    <div class="total-bar">
+      <span class="label">Total Lump Sum Fee (Included Stages)</span>
+      <span class="amount" id="totalDisplay">$0 + GST</span>
+    </div>
+
+    <button class="btn-primary" id="generateBtn" onclick="generateProposal()">
+      Generate Proposal →
+    </button>
+
+  </div>
+
+  <!-- ════════════════════════════════════════════
+       EXISTING PROJECTS VIEW
+  ════════════════════════════════════════════ -->
+  <div id="view-existing" class="view">
+    <div class="section-label">Existing Projects</div>
+    <div id="project-list-container">
+      <p style="color:var(--accent); font-family:var(--mono); font-size:0.75rem;">Loading projects…</p>
+    </div>
+  </div>
+
+</main>
+
+<div id="toast"></div>
+
+<script>
+// ──────────────────────────────────────────────
+// STATE
+// ──────────────────────────────────────────────
+let stages = [];
+let consultants = [];
+
+// ──────────────────────────────────────────────
+// INIT
+// ──────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  // Set today's date
+  const today = new Date();
+  document.getElementById('proposalDate').valueAsDate = today;
+
+  // Set financial year
+  const fy = today.getMonth() >= 6
+    ? `${today.getFullYear()}-${today.getFullYear()+1}`
+    : `${today.getFullYear()-1}-${today.getFullYear()}`;
+  document.getElementById('financialYear').value = fy;
+
+  // Load config from Apps Script
+  google.script.run
+    .withSuccessHandler(onConfigLoaded)
+    .withFailureHandler(err => showToast('Failed to load config: ' + err.message, 'error'))
+    .getConfig();
+});
+
+function onConfigLoaded(config) {
+  // Populate project type dropdown
+  const sel = document.getElementById('projectType');
+  sel.innerHTML = config.projectTypes.map(t => `<option value="${t}">${t}</option>`).join('');
+
+  // Set rates
+  document.getElementById('rateArchitect').value    = config.rates.architect;
+  document.getElementById('rateGraduate').value     = config.rates.graduate;
+  document.getElementById('rateDraftsperson').value = config.rates.draftsperson;
+  document.getElementById('depositPercent').value   = config.depositPercent;
+
+  // Build consultants
+  consultants = config.defaultConsultants.map(c => ({...c}));
+  renderConsultants();
+
+  // Load stages for the initially selected template
+  if (config.projectTypes.length > 0) {
+    loadStagesForTemplate(config.projectTypes[0]);
+  }
+
+  // Reload stages whenever template changes
+  sel.addEventListener('change', () => loadStagesForTemplate(sel.value));
+}
+
+function loadStagesForTemplate(templateName) {
+  const container = document.getElementById('stages-container');
+  container.innerHTML = '<p style="color:var(--accent); font-family:var(--mono); font-size:0.75rem; padding:16px 0;">Loading stages for: ' + templateName + '…</p>';
+
+  console.log('loadStagesForTemplate called with:', templateName);
+
+  google.script.run
+    .withSuccessHandler(result => {
+      console.log('getStagesForTemplate result:', JSON.stringify(result));
+      if (!result.success) {
+        container.innerHTML = `<p style="color:var(--danger); font-family:var(--mono); font-size:0.75rem;">Backend error: ${result.error}</p>`;
+        return;
+      }
+      if (!result.stages || result.stages.length === 0) {
+        container.innerHTML = `<p style="color:var(--danger); font-family:var(--mono); font-size:0.75rem;">No stages found in template "${templateName}". Check that stage header lines are styled as Heading 3 in the Doc.</p>`;
+        return;
+      }
+      console.log('Stages loaded:', result.stages.length);
+      stages = result.stages.map(s => ({...s}));
+      renderStages();
+    })
+    .withFailureHandler(err => {
+      console.error('getStagesForTemplate failed:', err);
+      container.innerHTML = `<p style="color:var(--danger); font-family:var(--mono); font-size:0.75rem;">Call failed: ${err.message}</p>`;
+    })
+    .getStagesForTemplate(templateName);
+}
+
+// ──────────────────────────────────────────────
+// STAGES
+// ──────────────────────────────────────────────
+function renderStages() {
+  const container = document.getElementById('stages-container');
+  container.innerHTML = stages.map((stage, i) => `
+    <div class="stage-card" id="stage-card-${i}">
+      <div class="stage-header" onclick="toggleStage(${i})">
+        <span class="stage-number">${stage.stageKey.replace('_','.')}</span>
+        <span class="stage-title">${stage.name}</span>
+        <div class="stage-toggle" onclick="event.stopPropagation()">
+          <button onclick="setStageStatus(${i},'Included')"  class="${stage.status==='Included'  ? 'active-included' : ''}">Included</button>
+          <button onclick="setStageStatus(${i},'Optional')"  class="${stage.status==='Optional'  ? 'active-optional' : ''}">Optional</button>
+          <button onclick="setStageStatus(${i},'Excluded')"  class="${stage.status==='Excluded'  ? 'active-excluded' : ''}">Exclude</button>
+        </div>
+        <div class="rate-input-wrap" onclick="event.stopPropagation()">
+          <span>$</span>
+          <input type="number" min="0" placeholder="Fee" style="width:110px"
+            value="${stage.fee}"
+            oninput="stages[${i}].fee = this.value; updateTotal()"
+            ${stage.status === 'Excluded' ? 'disabled' : ''}>
+          <span style="font-size:0.65rem; color:var(--rule)">+GST</span>
+        </div>
+        <span class="stage-chevron">▼</span>
+      </div>
+      <div class="stage-body">
+        <div class="field">
+          <label>Stage Description</label>
+          <textarea rows="8" oninput="stages[${i}].description = this.value">${stage.description}</textarea>
+        </div>
+      </div>
+    </div>
+  `).join('');
+  updateTotal();
+}
+
+function toggleStage(i) {
+  document.getElementById(`stage-card-${i}`).classList.toggle('open');
+}
+
+function setStageStatus(i, status) {
+  stages[i].status = status;
+  renderStages();
+}
+
+function updateTotal() {
+  const total = stages
+    .filter(s => s.status === 'Included')
+    .reduce((sum, s) => sum + (parseFloat(s.fee) || 0), 0);
+  document.getElementById('totalDisplay').textContent =
+    '$' + total.toLocaleString() + ' + GST';
+}
+
+// ──────────────────────────────────────────────
+// CONSULTANTS
+// ──────────────────────────────────────────────
+function renderConsultants() {
+  const container = document.getElementById('consultants-container');
+  container.innerHTML = `
+    <div style="background:white; border:1px solid var(--rule); padding: 4px 20px;">
+      ${consultants.map((c, i) => `
+        <div class="consultant-row">
+          <input type="checkbox" class="toggle-check" ${c.included ? 'checked' : ''}
+            onchange="consultants[${i}].included = this.checked; updateConsultantRow(${i})">
+          <span class="consultant-name ${c.included ? '' : 'excluded'}" id="cname-${i}">${c.name}</span>
+          <div class="rate-input-wrap">
+            <span>$</span>
+            <input type="number" min="0" value="${c.amount}" style="width:100px"
+              oninput="consultants[${i}].amount = this.value"
+              ${c.included ? '' : 'disabled'}>
+            <span style="font-size:0.65rem; color:var(--rule)">+GST</span>
+          </div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function updateConsultantRow(i) {
+  // Re-render just the name style and enable/disable input
+  const row = document.getElementById('consultants-container')
+    .querySelectorAll('.consultant-row')[i];
+  const nameEl = row.querySelector('.consultant-name');
+  const input  = row.querySelector('input[type=number]');
+  if (consultants[i].included) {
+    nameEl.classList.remove('excluded');
+    input.disabled = false;
+  } else {
+    nameEl.classList.add('excluded');
+    input.disabled = true;
+  }
+}
+
+// ──────────────────────────────────────────────
+// GENERATE PROPOSAL
+// ──────────────────────────────────────────────
+function generateProposal() {
+  const clientName     = document.getElementById('clientName').value.trim();
+  const clientAddress  = document.getElementById('clientAddress').value.trim();
+  const projectAddress = document.getElementById('projectAddress').value.trim();
+  const projectType    = document.getElementById('projectType').value;
+  const date           = document.getElementById('proposalDate').value;
+  const projectDesc    = document.getElementById('projectDescription').value.trim();
+  const financialYear  = document.getElementById('financialYear').value.trim();
+
+  // Basic validation
+  if (!clientName || !projectAddress || !projectType || !date) {
+    showToast('Please fill in client name, project address, type and date.', 'error');
+    return;
+  }
+
+  const total = stages
+    .filter(s => s.status === 'Included')
+    .reduce((sum, s) => sum + (parseFloat(s.fee) || 0), 0);
+
+  const data = {
+    clientName,
+    clientAddress,
+    projectAddress,
+    projectType,
+    date: formatDisplayDate(date),
+    projectDescription: projectDesc,
+    financialYear,
+    totalFee: total,
+    depositPercent: document.getElementById('depositPercent').value,
+    rates: {
+      architect:    document.getElementById('rateArchitect').value,
+      graduate:     document.getElementById('rateGraduate').value,
+      draftsperson: document.getElementById('rateDraftsperson').value,
+    },
+    stages: stages.map(s => ({
+      stageKey:    s.stageKey,
+      status:      s.status,
+      fee:         s.fee,
+      description: s.description,
+    })),
+    consultants: consultants.map(c => ({
+      name:     c.name,
+      amount:   c.amount,
+      included: c.included,
+    })),
+  };
+
+  const btn = document.getElementById('generateBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Generating…';
+  showToast('Creating your proposal in Google Drive…');
+
+  google.script.run
+    .withSuccessHandler(result => {
+      btn.disabled = false;
+      btn.textContent = 'Generate Proposal →';
+      if (result.success) {
+        showToast('Proposal created! Opening now…', 'success');
+        window.open(result.docUrl, '_blank');
+      } else {
+        showToast('Error: ' + result.error, 'error');
+      }
+    })
+    .withFailureHandler(err => {
+      btn.disabled = false;
+      btn.textContent = 'Generate Proposal →';
+      showToast('Error: ' + err.message, 'error');
+    })
+    .generateProposal(data);
+}
+
+// ──────────────────────────────────────────────
+// EXISTING PROJECTS
+// ──────────────────────────────────────────────
+let existingLoaded = false;
+
+function loadExisting() {
+  if (existingLoaded) return;
+  google.script.run
+    .withSuccessHandler(result => {
+      existingLoaded = true;
+      const container = document.getElementById('project-list-container');
+      if (!result.success) {
+        container.innerHTML = `<p style="color:var(--danger); font-family:var(--mono); font-size:0.75rem;">Error: ${result.error}</p>`;
+        return;
+      }
+      if (result.projects.length === 0) {
+        container.innerHTML = `<p style="color:var(--accent); font-family:var(--mono); font-size:0.75rem;">No projects found.</p>`;
+        return;
+      }
+      container.innerHTML = `<div class="project-list">` +
+        result.projects.map(p => `
+          <div class="project-item">
+            <div>
+              <div class="proj-name">${p.folderName}</div>
+              ${p.docName ? `<div class="proj-doc">${p.docName}</div>` : '<div class="no-doc">No document found</div>'}
+            </div>
+            ${p.docUrl
+              ? `<a href="${p.docUrl}" target="_blank">Open Doc →</a>`
+              : `<span style="color:var(--rule); font-family:var(--mono); font-size:0.65rem;">—</span>`
+            }
+          </div>
+        `).join('') +
+      `</div>`;
+    })
+    .withFailureHandler(err => {
+      document.getElementById('project-list-container').innerHTML =
+        `<p style="color:var(--danger); font-family:var(--mono); font-size:0.75rem;">Error: ${err.message}</p>`;
+    })
+    .getExistingProjects();
+}
+
+// ──────────────────────────────────────────────
+// HELPERS
+// ──────────────────────────────────────────────
+function showView(view) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById(`view-${view}`).classList.add('active');
+  event.target.classList.add('active');
+}
+
+function showToast(msg, type = '') {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className = type ? `show ${type}` : 'show';
+  clearTimeout(toast._timer);
+  toast._timer = setTimeout(() => toast.className = '', 3500);
+}
+
+function formatDisplayDate(isoDate) {
+  if (!isoDate) return '';
+  const [y, m, d] = isoDate.split('-');
+  const months = ['January','February','March','April','May','June',
+                  'July','August','September','October','November','December'];
+  return `${parseInt(d)} ${months[parseInt(m)-1]} ${y}`;
+}
+</script>
+</body>
+</html>
